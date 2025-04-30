@@ -19,7 +19,7 @@ nutrition_df = pd.read_csv(os.path.join(DATA_DIR, 'nutrition_source.csv'))
 unit_df = pd.read_csv(os.path.join(DATA_DIR, 'unit_of_measurements.csv'))
 food_cat_df = pd.read_csv(os.path.join(DATA_DIR, 'food_categories.csv'))
 
-# Clean column names (important)
+# Clean column names
 nutrition_df.columns = nutrition_df.columns.str.strip().str.lower()
 unit_df.columns = unit_df.columns.str.strip().str.lower()
 food_cat_df.columns = food_cat_df.columns.str.strip().str.lower()
@@ -39,28 +39,31 @@ def estimate_nutrition():
         if not dish_name:
             return jsonify({"error": "No dish provided"}), 400
 
-        # Step 1: Fetch ingredients for the dish
+        # Step 1: Fetch ingredients from Gemini
         raw_ingredients = fetch_recipe_ingredients(dish_name)
         if not raw_ingredients:
             return jsonify({"error": f"No recipe found for '{dish_name}'"}), 404
 
-        # Step 2: Fuzzy match and attach quantity
+        # Step 2: Fuzzy match + weight estimation
         matched = []
         for item in raw_ingredients:
             match = ingredient_mapper.match(item["name"])
             match["weight_in_grams"] = safe_get_weight(item)
             matched.append(match)
 
-        # Step 3: Nutrition per ingredient
+        # Step 3: Nutrition calculation
         total_nutrition = nutrition_calculator.estimate_total_nutrition(matched)
 
-        # Step 4: Serving scaling
-        cooked_weight = sum(item["weight_in_grams"] for item in matched)
+        # Step 4: Dish type classification (Gemini)
         food_type = classify_food_type(dish_name, food_cat_df)
+
+        # Step 5: Scale to 1 standard serving (e.g., 180g for Wet Sabzi)
+        cooked_weight = sum(item["weight_in_grams"] for item in matched)
         std_serving_weight = convert_to_grams("1 katori", unit_df, food_type)
         scale = std_serving_weight / cooked_weight if cooked_weight else 1
         scaled = {k: round(v * scale, 2) for k, v in total_nutrition.items()}
 
+        # Step 6: Format output
         return jsonify({
             "estimated_nutrition_per_200ml_katori": scaled,
             "dish_type": food_type,
@@ -69,8 +72,8 @@ def estimate_nutrition():
                     "original": i["input"],
                     "ingredient": i["matched_ingredient"],
                     "match_confidence": i["confidence_score"],
-                    "quantity": i.get("friendly_quantity", f'{i["weight_in_grams"]}g')
-                } for i in matched
+                    "quantity": item.get("household_quantity", i.get("friendly_quantity", f'{i["weight_in_grams"]}g'))
+                } for i, item in zip(matched, raw_ingredients)
             ]
         })
 
