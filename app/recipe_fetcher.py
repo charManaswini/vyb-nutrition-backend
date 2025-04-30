@@ -4,11 +4,8 @@ from dotenv import load_dotenv
 import os
 import json
 
-# Load your Gemini API Key
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-# Configure Gemini client
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 def fetch_recipe_ingredients(dish_name):
@@ -17,18 +14,16 @@ def fetch_recipe_ingredients(dish_name):
             model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
                 system_instruction=(
-                    "You're a nutrition assistant. "
-                    "Given an Indian dish name, reply only in pure JSON array "
-                    "of 5 key ingredients with estimated weight in grams, like:\n"
-                    "[{\"name\": \"Ingredient\", \"weight_in_grams\": 100}, ...]"
+                    "You are a nutrition assistant. "
+                    "Given an Indian dish, return only a JSON array of 5 ingredients with both raw weight in grams "
+                    "and estimated household quantity (e.g., '2 tablespoons', '1 cup chopped').\n"
+                    "Format: [{\"name\": \"Ingredient\", \"weight_in_grams\": 100, \"household_quantity\": \"2 tablespoons\"}, ...]"
                 )
             ),
-            contents=f"What are the 5 main ingredients of {dish_name} with estimated weights in grams?"
+            contents=f"What are the 5 main ingredients of {dish_name} with estimated weights and household measurements?"
         )
 
         raw = response.text.strip()
-
-        # Extract and parse only the JSON part
         json_start = raw.find("[")
         json_end = raw.rfind("]") + 1
         json_str = raw[json_start:json_end]
@@ -37,5 +32,5 @@ def fetch_recipe_ingredients(dish_name):
         return ingredients if isinstance(ingredients, list) else []
 
     except Exception as e:
-        print("[Gemini Error]", str(e))
+        print("[Gemini Ingredient Error]", str(e))
         return []
