@@ -5,3 +5,4 @@ python-Levenshtein
 python-dotenv
 google-generativeai
 gunicorn
+google-genai
