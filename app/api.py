@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 import pandas as pd
 import os
+from flask_cors import CORS
+
 
 from .ingredient_mapper import IngredientMapper
 from .nutrition_calculator import NutritionCalculator
@@ -10,6 +12,9 @@ from .unit_converter import convert_to_grams
 from .utils import safe_get_weight
 
 app = Flask(__name__)
+
+CORS(app)
+
 
 # Load CSVs
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
