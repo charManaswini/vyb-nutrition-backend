@@ -3,7 +3,6 @@ import pandas as pd
 import os
 from flask_cors import CORS
 
-
 from .ingredient_mapper import IngredientMapper
 from .nutrition_calculator import NutritionCalculator
 from .recipe_fetcher import fetch_recipe_ingredients
@@ -12,9 +11,7 @@ from .unit_converter import convert_to_grams
 from .utils import safe_get_weight
 
 app = Flask(__name__)
-
 CORS(app)
-
 
 # Load CSVs
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
@@ -69,12 +66,13 @@ def estimate_nutrition():
             "dish_type": food_type,
             "ingredients_used": [
                 {
-                    "ingredient": i["matched_ingredient"],
                     "original": i["input"],
-                    "quantity": f'{i["weight_in_grams"]}g',
-                    "match_confidence": i["confidence_score"]
+                    "ingredient": i["matched_ingredient"],
+                    "match_confidence": i["confidence_score"],
+                    "quantity": i.get("friendly_quantity", f'{i["weight_in_grams"]}g')
                 } for i in matched
             ]
         })
+
     except Exception as e:
         return jsonify({"error": "Internal server error", "details": str(e)}), 500
